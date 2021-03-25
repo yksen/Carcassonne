@@ -1,15 +1,14 @@
 import pygame, sys, random
 from pygame.locals import *
+import tileSets as ts
 
 pygame.init()
  
-HEIGHT = 900
-WIDTH = 1600
 FPS = 60
- 
+
 FramePerSec = pygame.time.Clock()
  
-displaysurface = pygame.display.set_mode((WIDTH, HEIGHT))
+screen = pygame.display.set_mode((1600, 900))
 pygame.display.set_caption("Carcassonne")
 
 while True:
@@ -18,7 +17,7 @@ while True:
             pygame.quit()
             sys.exit()
 
-    displaysurface.fill((0, 0, 0))
- 
+    screen.fill((0, 0, 0))
+
     pygame.display.update()
     FramePerSec.tick(FPS)
