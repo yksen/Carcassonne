@@ -1,11 +1,12 @@
 import pygame
 
+pygame.init()
+
 class Tile:
     def __init__(self, filename, x, y, cities, fields, roads, cloister, shield):
         self.filename = filename
-        # tileSet = pygame.image.load(filename).convert()
-        # tile = tileSet.subsurface(x, y, 256, 256)
-        # self.surface = pygame.transform.scale(tile, (128, 128))
+        self.x = x
+        self.y = y
         self.cities = cities
         self.fields = fields
         self.roads = roads
