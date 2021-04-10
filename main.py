@@ -13,7 +13,8 @@ tileSet = pygame.image.load("tiles.png").convert()
 
 class App:
     def __init__(self):
-        self.mouseClicked = 0
+        self.mouseLeftClicked = 0
+        self.mouseRightClicked = 0
         self.mouseMoving = 0
     class Game:
         def __init__(self):
@@ -64,19 +65,27 @@ while True:
     for event in events:
         if event.type == QUIT:
             pygame.quit()
-            sys.exit()              
+            sys.exit()   
+        if event.type == pygame.MOUSEMOTION:
+            carcassonne.mouseMoving = 1
         if event.type == pygame.MOUSEBUTTONDOWN:
-            carcassonne.mouseClicked = 1          
+            if event.button == 1: carcassonne.mouseLeftClicked = 1
+            if event.button == 3: carcassonne.mouseRightClicked = 1
+
         if game.hasStarted:
-            if event.type == pygame.MOUSEMOTION and carcassonne.mouseClicked:
-                carcassonne.mouseMoving = 1
+            if carcassonne.mouseMoving and carcassonne.mouseLeftClicked:
                 game.relativeX += event.rel[0]
                 game.relativeY += event.rel[1]
-            if event.type == pygame.MOUSEBUTTONUP and not carcassonne.mouseMoving:            
+                mouseMoved = 1
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 1 and not carcassonne.mouseMoving and not mouseMoved:            
                 game.placedTiles.append(game.PlacedTile(getattr(ts, 'tile' + str(random.randrange(1, 72))), pygame.mouse.get_pos()[0] - game.relativeX, pygame.mouse.get_pos()[1] - game.relativeY, 0))
-        if event.type == pygame.MOUSEBUTTONUP:
-            carcassonne.mouseClicked = 0
-            carcassonne.mouseMoving = 0  
+        
+        if event.type == pygame.MOUSEMOTION:
+            carcassonne.mouseMoving = 0            
+        if event.type == pygame.MOUSEBUTTONUP: 
+            if event.button == 1: carcassonne.mouseLeftClicked = 0
+            if event.button == 3: carcassonne.mouseRightClicked = 0
+            mouseMoved = 0
 
     game.drawAll()
     pygame.display.update()
