@@ -23,18 +23,20 @@ class App:
             self.relativeY = 0
             self.placedTiles = {}
             self.tileStack = []
-            self.nextTile = ''
         def start(self):
             self.hasStarted = 1
-            self.randomizeTiles()
+            self.gameSetup()
             menu.toggle()
-        def randomizeTiles(self):
+        def gameSetup(self):
             tileOrder = []
             for i in range(72):
                 tileOrder.append(i + 1)
+            tileOrder.pop(tileOrder.index(36))
             self.tileStack.clear
             for i in range(72):
-                self.tileStack.append(tileOrder[random.randint(0, len(tileOrder) - 1)])
+                self.tileStack.append(tileOrder[random.randint(0, len(tileOrder) - 1)])            
+            self.placedTiles[768] = {}
+            self.placedTiles[768][384] = self.Tile(ts.tile36, 768, 384, 0)
             self.nextTile = self.Tile(getattr(ts, 'tile' + str(self.tileStack[0])), 0, 0, 0)
         def drawMenu(self):
             if menu.is_enabled():
@@ -93,8 +95,6 @@ game = app.Game()
 menu = pygame_menu.Menu('', 1600, 900, theme = pygame_menu.themes.THEME_DARK)
 menu.add.button('Play', game.start)
 menu.add.button('Quit', pygame_menu.events.EXIT)
-
-
 
 while True:
     events = pygame.event.get()
