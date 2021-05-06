@@ -33,11 +33,13 @@ class App:
                 tileOrder.append(i + 1)
             tileOrder.pop(tileOrder.index(36))
             self.tileStack.clear
-            for i in range(72):
-                self.tileStack.append(tileOrder[random.randint(0, len(tileOrder) - 1)])            
+            for i in range(71):
+                randIndex = random.randint(0, len(tileOrder) - 1)
+                self.tileStack.append(tileOrder[randIndex])      
+                tileOrder.pop(randIndex)      
             self.placedTiles[768] = {}
-            self.placedTiles[768][384] = self.Tile(ts.tile36, 768, 384, 0)
-            self.nextTile = self.Tile(getattr(ts, 'tile' + str(self.tileStack[0])), 0, 0, 0)
+            self.placedTiles[768][384] = self.Tile(ts.tile36, 768, 384)
+            self.nextTile = self.Tile(getattr(ts, 'tile' + str(self.tileStack[0])), 0, 0)
         def drawMenu(self):
             if menu.is_enabled():
                 menu.draw(screen)
@@ -52,9 +54,8 @@ class App:
         def drawAll(self):
             self.drawGame()
             self.drawMenu()
-        def placeTile(self):
+        def placeTile(self, mousePos):
             if len(self.tileStack) > 0:        
-                    mousePos = pygame.mouse.get_pos()
                     x = mousePos[0] - self.relativeX
                     y = mousePos[1] - self.relativeY
                     posX = math.floor(x / 128) * 128
@@ -67,17 +68,23 @@ class App:
                         for i in self.placedTiles[posX].keys():
                             keysList.append(i)
                         if posY not in keysList:
-                            self.placedTiles[posX][posY] = self.Tile(getattr(ts, 'tile' + str(self.tileStack[0])), posX, posY, 0)
+                            self.placedTiles[posX][posY] = self.nextTile
+                            self.placedTiles[posX][posY].posX = posX
+                            self.placedTiles[posX][posY].posY = posY
                         else:
                             return
                     else:
                         self.placedTiles[posX] = {}
-                        self.placedTiles[posX][posY] = self.Tile(getattr(ts, 'tile' + str(self.tileStack[0])), posX, posY, 0)
+                        self.placedTiles[posX][posY] = self.nextTile
+                        self.placedTiles[posX][posY].posX = posX
+                        self.placedTiles[posX][posY].posY = posY
                     self.tileStack.pop(0)
-                    self.nextTile = self.Tile(getattr(ts, 'tile' + str(self.tileStack[0])), 0, 0, 0)
-
+                    if len(self.tileStack) > 0:
+                        self.nextTile = self.Tile(getattr(ts, 'tile' + str(self.tileStack[0])), 0, 0)
+        def checkAvaiableSpots(self):
+            pass
         class Tile:
-            def __init__(self, id, posX, posY, rotation):
+            def __init__(self, id, posX, posY):
                 self.id = id
                 self.txtPosX = self.id.x
                 self.txtPosY = self.id.y
@@ -85,9 +92,19 @@ class App:
                 self.surface = pygame.transform.scale(tileTxt, (128, 128))
                 self.posX = posX
                 self.posY = posY
-                self.rotation = rotation                
+                self.rotation = 0   
+                self.cities = self.id.cities
+                self.fields = self.id.fields
+                self.roads = self.id.roads
+                self.cloister = self.id.cloister
+                self.shield = self.id.shield       
+            def rotateTileImage(self):
+                self.surface = pygame.transform.rotate(self.surface, -90)
+                self.rotateTile()
             def rotateTile(self):
-                pass
+                rotatePattern = ['N', 'E', 'S', 'W']
+                rotatePatternExtended = ['NNE', 'ENE', 'ESE', 'SSE', 'SSW', 'WSW', 'WNW', 'NNW']
+
 
 app = App()
 game = app.Game()
@@ -114,7 +131,9 @@ while True:
                 game.relativeY += event.rel[1]
                 mouseMoved = 1
             if event.type == pygame.MOUSEBUTTONUP and event.button == 1 and not app.mouseMoving and not mouseMoved:
-                game.placeTile()
+                game.placeTile(pygame.mouse.get_pos())
+            if event.type == pygame.MOUSEBUTTONUP and event.button == 3 and not app.mouseMoving and not mouseMoved:
+                game.nextTile.rotateTileImage()
 
         if event.type == pygame.MOUSEMOTION:
             app.mouseMoving = 0            
