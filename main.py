@@ -1,4 +1,5 @@
 import pygame, sys, random, pygame_menu, math, copy
+from pygame import mouse
 from pygame.locals import *
 import tileSets as ts
 
@@ -52,6 +53,7 @@ class App:
             self.playerMeeples = [7, 7, 7, 7]
             self.meeplePositions = [[] ,[] ,[] ,[]]
             self.playerPoints = [0, 0, 0, 0]
+            self.drawSkip = 0
         def start(self):
             self.hasStarted = 1
             self.setPlayerNames()
@@ -130,7 +132,24 @@ class App:
                                 y = j * 128 + math.floor(self.relativeY)
                                 pygame.draw.rect(screen, (128, 64, 0), pygame.Rect(x, y, 128, 128))
                                 if self.availableSpots[i][j][self.currentRotation] == True:
-                                    pygame.draw.rect(screen, (0, 153, 0), pygame.Rect(x, y, 128, 128))                                                                  
+                                    pygame.draw.rect(screen, (0, 153, 0), pygame.Rect(x, y, 128, 128))    
+                if self.drawSkip:
+                    infoX = (SCREEN_WIDTH - self.gameStateMenuWidth) / 2 - 120
+                    infoY = 16
+                    infoWidth = 240
+                    infoHeight = 64
+                    pygame.draw.rect(screen, (252, 177, 3), pygame.Rect(infoX, infoY, infoWidth, infoHeight))
+                    text = font.render("Skip placing a meeple", True, (0, 0, 0))
+                    screen.blit(text, text.get_rect(center=((SCREEN_WIDTH - self.gameStateMenuWidth) / 2, infoY + 32)))  
+
+        def checkSkip(self, mousePos):
+            if pygame.Rect.collidepoint(pygame.Rect((SCREEN_WIDTH - self.gameStateMenuWidth) / 2 - 120, 16, 240, 64), mousePos):
+                self.scoreCloisters(self.placedTile)
+                self.scoreRoads(self.placedTile)
+                self.playerTurn = 0 if self.playerTurn + 1 > self.playerCount - 1 else self.playerTurn + 1
+                self.turnState = 'tile'
+                self.drawSkip = 0
+
         def drawGameState(self):
             pygame.draw.rect(screen, (200, 115, 24), pygame.Rect(SCREEN_WIDTH - self.gameStateMenuWidth, 0, self.gameStateMenuWidth, SCREEN_HEIGHT))
             pygame.draw.rect(screen, (77, 40, 0), pygame.Rect(SCREEN_WIDTH - 128 - ((self.gameStateMenuWidth - 128) / 2) - 4, 64 - 4, 128 + 2 * 4, 128 + 2 * 4))
@@ -244,18 +263,23 @@ class App:
                         self.scoreRoads(self.placedTile)
                         self.playerMeeples[self.playerTurn] -= 1
                         self.playerTurn = 0 if self.playerTurn + 1 > self.playerCount - 1 else self.playerTurn + 1
-                        self.turnState = 'tile' 
+                        self.turnState = 'tile'
+                        self.drawSkip = 0
             else:
                 self.scoreCloisters(self.placedTile)
                 self.scoreRoads(self.placedTile)
                 self.playerTurn = 0 if self.playerTurn + 1 > self.playerCount - 1 else self.playerTurn + 1
                 self.turnState = 'tile'
+                self.drawSkip = 0
         def checkMeepleSpots(self):
             self.meepleSpots.clear()
     
             self.checkCloisters(self.placedTile)
-            self.checkRoads(self.placedTile)
+            self.checkRoads(self.placedTile)        
             # self.checkCities(self.placedTile)
+
+            if len(self.meepleSpots) > 0 and self.playerMeeples[self.playerTurn] > 0:
+                self.drawSkip = 1
 
         def checkCloisters(self, tile):
             if tile.cloister:
@@ -512,6 +536,7 @@ while True:
                 if game.turnState == 'tile':
                     game.placeTile(pygame.mouse.get_pos())                
                 elif game.turnState == 'meeple':
+                    game.checkSkip(pygame.mouse.get_pos())
                     game.placeMeeple(pygame.mouse.get_pos())
             if event.type == pygame.MOUSEBUTTONUP and event.button == 3 and not app.mouseMoving and not mouseMoved:                
                 game.nextTile.rotateTileImage()
