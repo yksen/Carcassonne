@@ -58,7 +58,8 @@ class App:
             self.hasStarted = 1
             self.setPlayerNames()
             self.gamesetup()
-            settingsMenu.remove_widget(settingsMenu.get_widgets()[-1])
+            for widget in settingsMenu.get_widgets():
+                settingsMenu.remove_widget(widget)
         def launchsettingsMenu(self):
             menu.toggle()
             settingsMenu.toggle()
@@ -155,7 +156,10 @@ class App:
             pygame.draw.rect(screen, (77, 40, 0), pygame.Rect(SCREEN_WIDTH - 128 - ((self.gameStateMenuWidth - 128) / 2) - 4, 64 - 4, 128 + 2 * 4, 128 + 2 * 4))
             text = font.render('Next tile:', True, (0, 0, 0))
             screen.blit(text, text.get_rect(center=(SCREEN_WIDTH - self.gameStateMenuWidth / 2, 32)))
-            text = font.render('Tiles left: ' + str(len(self.tileStack) - 1), True, (0, 0, 0))
+            if len(self.tileStack) > 0:
+                text = font.render('Tiles left: ' + str(len(self.tileStack) - 1), True, (0, 0, 0))
+            else:
+                text = font.render('Tiles left: ' + str(len(self.tileStack)), True, (0, 0, 0))
             screen.blit(text, text.get_rect(center=(SCREEN_WIDTH - self.gameStateMenuWidth / 2, 230)))
             if self.playerTurn < len(self.playerNames):
                 text = font.render(str(self.playerNames[self.playerTurn]) + "'s turn", True, (0, 0, 0))
@@ -170,7 +174,10 @@ class App:
                 infoWidth = self.gameStateMenuWidth - 32
                 infoHeight = 64
                 pygame.draw.rect(screen, (77, 40, 0), pygame.Rect(infoX - 4, infoY - 4, infoWidth + 8, infoHeight + 8))
-                pygame.draw.rect(screen, (252, 177, 3), pygame.Rect(infoX, infoY, infoWidth, infoHeight))
+                if n == self.playerTurn:
+                    pygame.draw.rect(screen, (3, 252, 244), pygame.Rect(infoX, infoY, infoWidth, infoHeight))
+                else:
+                    pygame.draw.rect(screen, (252, 177, 3), pygame.Rect(infoX, infoY, infoWidth, infoHeight))
                 text = font.render(name, True, (0, 0, 0))
                 screen.blit(text, text.get_rect(center=(SCREEN_WIDTH - self.gameStateMenuWidth / 2 - 26, infoY + 18)))
                 text = font.render(str(self.playerPoints[n]), True, (0, 0, 0))
@@ -375,9 +382,10 @@ class App:
                                 if pos in self.meeplePositions[i]: 
                                     meeplesToRemove.append(pos)
                                     meeplesCount[i] += 1
-                                if pos2 in self.meeplePositions[i]:
-                                    meeplesToRemove.append(pos2)
-                                    meeplesCount[i] += 1
+                                if pos2[2] != 'C':
+                                    if pos2 in self.meeplePositions[i]:
+                                        meeplesToRemove.append(pos2)
+                                        meeplesCount[i] += 1
                             opp = self.getOppositeSide(pos[2])
                             if self.placedTiles[pos[0] + opp[0]][pos[1] + opp[1]] is not None: 
                                 if len(self.placedTiles[pos[0] + opp[0]][pos[1] + opp[1]].roads) > 0:
@@ -403,6 +411,7 @@ class App:
                 if roadEndsCount == 2:
                     high = max(meeplesCount)
                     for n, i in enumerate(meeplesCount):
+                        self.playerMeeples[n] += i
                         if i == high:
                             self.playerPoints[n] += roadLength
                     for meeple in meeplesToRemove:
