@@ -31,6 +31,7 @@ class App:
         def __init__(self):
             self.boardSize = 71
             self.hasStarted = 0
+            self.hasEnded = 0
             self.turnState = "tile"
             self.gameStateMenuWidth = 300
             self.relativeX = -(math.floor(self.boardSize / 2) * 128) + math.floor(((SCREEN_WIDTH - self.gameStateMenuWidth) / 128 / 2)) * 128
@@ -54,12 +55,17 @@ class App:
             self.meeplePositions = [[] ,[] ,[] ,[]]
             self.playerPoints = [0, 0, 0, 0]
             self.drawSkip = 0
+            self.drawWinner = 0
         def start(self):
             self.hasStarted = 1
             self.setPlayerNames()
             self.gamesetup()
             for widget in settingsMenu.get_widgets():
                 settingsMenu.remove_widget(widget)
+        def endGame(self):
+            if self.hasEnded:
+                self.scoreAll()
+                self.drawWinner = 1
         def launchsettingsMenu(self):
             menu.toggle()
             settingsMenu.toggle()
@@ -87,6 +93,8 @@ class App:
                 tileOrder.pop(randIndex)   
             halfBoardSize = math.floor(self.boardSize / 2)   
             self.placedTiles[halfBoardSize][halfBoardSize] = self.Tile(ts.tile36, halfBoardSize, halfBoardSize)
+            # for i in range(len(self.tileStack) - 0):
+            #     self.tileStack.pop(0)
             self.nextTile = self.Tile(getattr(ts, 'tile' + str(self.tileStack[0])), 0, 0)
             self.checkAvaiableSpots()
         def drawsettingsMenu(self):
@@ -135,7 +143,7 @@ class App:
                         x = spot[0] * 128 + math.floor(self.relativeX) + side[0]
                         y = spot[1] * 128 + math.floor(self.relativeY) + side[1]  
                         pygame.draw.rect(screen, (255, 0, 0), pygame.Rect(x, y, 20, 20))
-                if self.turnState == 'tile':
+                if self.turnState == 'tile' and not self.hasEnded:
                     for i in range(self.boardSize):
                         for j in range(self.boardSize):
                             if 1 in self.availableSpots[i][j]:
@@ -152,7 +160,27 @@ class App:
                     pygame.draw.rect(screen, (252, 177, 3), pygame.Rect(infoX, infoY, infoWidth, infoHeight))
                     text = font.render("Skip placing a meeple", True, (0, 0, 0))
                     screen.blit(text, text.get_rect(center=((SCREEN_WIDTH - self.gameStateMenuWidth) / 2, infoY + 32)))  
-
+            if self.hasEnded and self.drawWinner:
+                infoWidth = 480
+                infoHeight = 64
+                infoX = (SCREEN_WIDTH - self.gameStateMenuWidth) / 2 - infoWidth / 2
+                infoY = SCREEN_HEIGHT - infoHeight - 16
+                pygame.draw.rect(screen, (252, 177, 3), pygame.Rect(infoX, infoY, infoWidth, infoHeight))
+                high = max(self.playerPoints)
+                tmp = ""
+                multipleWinners = 0
+                for n, player in enumerate(self.playerNames):
+                    if self.playerPoints[n] == high:
+                        if len(tmp) > 0:
+                            tmp += ", "
+                            multipleWinners = 1
+                        tmp += player
+                if multipleWinners:
+                    tmp += " are the winners."
+                else:
+                    tmp += " is the winner."
+                text = font.render(tmp, True, (0, 0, 0))
+                screen.blit(text, text.get_rect(center=((SCREEN_WIDTH - self.gameStateMenuWidth) / 2, infoY + 32))) 
         def checkSkip(self, mousePos):
             if pygame.Rect.collidepoint(pygame.Rect((SCREEN_WIDTH - self.gameStateMenuWidth) / 2 - 120, 16, 240, 64), mousePos):
                 self.scoreCloisters(self.placedTile)
@@ -161,6 +189,9 @@ class App:
                 self.playerTurn = 0 if self.playerTurn + 1 > self.playerCount - 1 else self.playerTurn + 1
                 self.turnState = 'tile'
                 self.drawSkip = 0
+                if len(self.tileStack) == 0:
+                    self.hasEnded = 1
+                    self.endGame()
 
         def drawGameState(self):
             pygame.draw.rect(screen, (200, 115, 24), pygame.Rect(SCREEN_WIDTH - self.gameStateMenuWidth, 0, self.gameStateMenuWidth, SCREEN_HEIGHT))
@@ -230,6 +261,9 @@ class App:
                         self.scoreRoads(self.placedTile)
                         self.scoreCities(self.placedTile)
                         self.playerTurn = 0 if self.playerTurn + 1 > self.playerCount - 1 else self.playerTurn + 1
+                        if len(self.tileStack) == 0:
+                            self.hasEnded = 1
+                            self.endGame()
                     self.checkAvaiableSpots()    
         def checkAvaiableSpots(self):
             self.availableSpots.clear()
@@ -265,8 +299,7 @@ class App:
                                     fitsLeft = left is None or left.getTerrain('E') == terrainType
                                     fits = fits and fitsLeft
                             if fits:
-                                self.availableSpots[x][y][rot] = True      
-
+                                self.availableSpots[x][y][rot] = True              
         def placeMeeple(self, mousePos):
             posX = mousePos[0]
             posY = mousePos[1]
@@ -285,6 +318,9 @@ class App:
                         self.playerTurn = 0 if self.playerTurn + 1 > self.playerCount - 1 else self.playerTurn + 1
                         self.turnState = 'tile'
                         self.drawSkip = 0
+                        if len(self.tileStack) == 0:
+                            self.hasEnded = 1
+                            self.endGame()
             else:
                 self.scoreCloisters(self.placedTile)
                 self.scoreRoads(self.placedTile)
@@ -292,6 +328,9 @@ class App:
                 self.playerTurn = 0 if self.playerTurn + 1 > self.playerCount - 1 else self.playerTurn + 1
                 self.turnState = 'tile'
                 self.drawSkip = 0
+                if len(self.tileStack) == 0:
+                    self.hasEnded = 1
+                    self.endGame()
         def checkMeepleSpots(self):
             self.meepleSpots.clear()
     
@@ -373,62 +412,59 @@ class App:
         def scoreRoads(self, tile):
             x = tile.col
             y = tile.row
-            
+
             for road in tile.roads:
-                roadLength = 1
-                roadEndsCount = 0
-                meeplesCount = [0, 0, 0, 0]
-                meeplesToRemove = []
+                isFinished = True
+                uncheckedPositions = set()
+                checkedPositions = set()
                 for side in road:
-                    if side == 'C':
-                            roadEndsCount += 1
-                    else:
-                        pos = [x, y, side]
-                        pos2 = [x, y, 0]
-                        for i in road:
-                            if side in i:
-                                tmp = road.copy()
-                                tmp.remove(side)
-                                pos2[2] = tmp[0]                        
-                        roadNotEnded = 1
-                        while roadNotEnded:
-                            roadLength += 1
-                            for i in range(self.playerCount):
-                                if pos in self.meeplePositions[i]: 
-                                    meeplesToRemove.append(pos)
-                                    meeplesCount[i] += 1
-                                if pos2[2] != 'C':
-                                    if pos2 in self.meeplePositions[i]:
-                                        meeplesToRemove.append(pos2)
-                                        meeplesCount[i] += 1
-                            opp = self.getOppositeSide(pos[2])
-                            if self.placedTiles[pos[0] + opp[0]][pos[1] + opp[1]] is not None: 
-                                if len(self.placedTiles[pos[0] + opp[0]][pos[1] + opp[1]].roads) > 0:
-                                    for road2 in self.placedTiles[pos[0] + opp[0]][pos[1] + opp[1]].roads:
-                                        if opp[2] in road2:
-                                            if 'C' in road2:
-                                                roadEndsCount += 1
-                                                roadNotEnded = 0
-                                                pos2 = [pos[0] + opp[0], pos[1] + opp[1], opp[2]]
-                                                for i in range(self.playerCount):
-                                                    if pos2 in self.meeplePositions[i]:
-                                                        meeplesToRemove.append(pos2)
-                                                        meeplesCount[i] += 1
-                                                break
-                                            else:
-                                                pos2 = [pos[0] + opp[0], pos[1] + opp[1], opp[2]]
-                                                tmp = road2.copy()
-                                                tmp.remove(opp[2])
-                                                pos = [pos[0] + opp[0], pos[1] + opp[1], tmp[0]]
-                            else:
-                                roadNotEnded = 0
-                                break
-                if roadEndsCount == 2:
+                    if side != 'C':
+                        uncheckedPositions.add((x, y, side))                    
+                while len(uncheckedPositions) > 0 and isFinished:                    
+                    positionsToAdd = []
+                    positionsToRemove = []
+                    for pos in uncheckedPositions:        
+                        opp = self.getOppositeSide(pos[2])
+                        oppPos = []
+                        if self.placedTiles[pos[0] + opp[0]][pos[1] + opp[1]] is not None: 
+                            oppPos = (pos[0] + opp[0], pos[1] + opp[1], opp[2])
+                            oppTile = self.placedTiles[oppPos[0]][oppPos[1]]
+                            for side in self.getRoad(oppTile, oppPos[2]):
+                                positionsToAdd.append((oppPos[0], oppPos[1], side))
+                        else:
+                            isFinished = False
+                            break
+                        checkedPositions.add(pos)
+                        positionsToRemove.append(pos)
+
+                    for pos in positionsToRemove:
+                        uncheckedPositions.remove(pos)
+                    for pos in positionsToAdd:
+                        if pos not in checkedPositions:
+                            uncheckedPositions.add(pos)
+                
+                if isFinished:
+                    roadTiles = []
+                    meeplesCount = [0, 0, 0, 0]
+                    meeplesToRemove = []
+                    for pos in checkedPositions:
+                        for i in range(self.playerCount):
+                            if list(pos) in self.meeplePositions[i]: 
+                                meeplesToRemove.append(list(pos))
+                                meeplesCount[i] += 1
+                        tile = self.placedTiles[pos[0]][pos[1]]
+                        if tile not in roadTiles:
+                            roadTiles.append(tile)
+                        
+                    roadScore = 0
+                    for tile in roadTiles:
+                        roadScore += 1
+                    
                     high = max(meeplesCount)
                     for n, i in enumerate(meeplesCount):
                         self.playerMeeples[n] += i
                         if i == high and i != 0:
-                            self.playerPoints[n] += roadLength
+                            self.playerPoints[n] += roadScore
                     for meeple in meeplesToRemove:
                         for player in self.meeplePositions:
                             if meeple in player:
@@ -522,7 +558,7 @@ class App:
                     high = max(meeplesCount)
                     for n, i in enumerate(meeplesCount):
                         self.playerMeeples[n] += i
-                        if i == high:
+                        if i == high and i != 0:
                             self.playerPoints[n] += cityScore
                     for meeple in meeplesToRemove:
                         for player in self.meeplePositions:
@@ -565,6 +601,252 @@ class App:
                 if isAvailable:
                     self.meepleSpots.append(startingPos)
 
+        def scoreAll(self):
+            while len(self.meeplePositions[0]) > 0 or len(self.meeplePositions[1]) > 0 or len(self.meeplePositions[2]) > 0 or len(self.meeplePositions[3]) > 0:
+                playerIndex = 0
+                for n, player in enumerate(self.meeplePositions):
+                    if len(player) > 0:
+                        playerIndex = n
+                        break
+                meeple = self.meeplePositions[playerIndex][0]
+                tile = self.placedTiles[meeple[0]][meeple[1]]
+                if meeple[2] == 'C':
+                    self.endScoreCloisters(tile)
+                elif len(meeple[2]) == 3:
+                    self.endScoreFields(tile, meeple[2])
+                else:
+                    for city in tile.cities:
+                        if meeple[2] in city:
+                            self.endScoreCities(tile, meeple[2])
+                    for road in tile.roads:
+                        if meeple[2] in road:
+                            self.endScoreRoads(tile, meeple[2])
+        def endScoreCloisters(self, tile):
+            tilesAround = []
+            cloisterScore = 0
+            for i in range(3):
+                for j in range(3):
+                    tilesAround.append(self.placedTiles[tile.col - 1 + i][tile.row - 1 + j])
+            for tile2 in tilesAround:
+                if tile2 != None:
+                    cloisterScore += 1
+            pos = [tile.col, tile.row, 'C']
+            for n, player in enumerate(self.meeplePositions):
+                if pos in player:
+                    self.playerPoints[n] += cloisterScore
+                    self.playerMeeples[n] += 1
+                    player.remove(pos)
+        def endScoreRoads(self, tile, meepleSide):
+            x = tile.col
+            y = tile.row
+
+            uncheckedPositions = set()
+            checkedPositions = set()
+            for side in self.getRoad(tile, meepleSide):
+                uncheckedPositions.add((x, y, side))                    
+            while len(uncheckedPositions) > 0:                    
+                positionsToAdd = []
+                positionsToRemove = []
+                for pos in uncheckedPositions:        
+                    opp = self.getOppositeSide(pos[2])
+                    oppPos = []
+                    if self.placedTiles[pos[0] + opp[0]][pos[1] + opp[1]] is not None: 
+                        oppPos = (pos[0] + opp[0], pos[1] + opp[1], opp[2])
+                        oppTile = self.placedTiles[oppPos[0]][oppPos[1]]
+                        for side in self.getRoad(oppTile, oppPos[2]):
+                            positionsToAdd.append((oppPos[0], oppPos[1], side))
+                    checkedPositions.add(pos)
+                    positionsToRemove.append(pos)
+
+                for pos in positionsToRemove:
+                    uncheckedPositions.remove(pos)
+                for pos in positionsToAdd:
+                    if pos not in checkedPositions:
+                        uncheckedPositions.add(pos)
+
+            roadTiles = []
+            meeplesCount = [0, 0, 0, 0]
+            meeplesToRemove = []
+            for pos in checkedPositions:
+                for i in range(self.playerCount):
+                    if list(pos) in self.meeplePositions[i]: 
+                        meeplesToRemove.append(list(pos))
+                        meeplesCount[i] += 1
+                tile = self.placedTiles[pos[0]][pos[1]]
+                if tile not in roadTiles:
+                    roadTiles.append(tile)
+                
+            roadScore = 0
+            for tile in roadTiles:
+                roadScore += 1
+            
+            high = max(meeplesCount)
+            for n, i in enumerate(meeplesCount):
+                self.playerMeeples[n] += i
+                if i == high and i != 0:
+                    self.playerPoints[n] += roadScore
+            for meeple in meeplesToRemove:
+                for player in self.meeplePositions:
+                    if meeple in player:
+                        player.remove(meeple)
+        def endScoreCities(self, tile, meepleSide):
+            x = tile.col
+            y = tile.row
+
+            uncheckedPositions = set()
+            checkedPositions = set()
+            for side in self.getCity(tile, meepleSide):
+                uncheckedPositions.add((x, y, side))                    
+            while len(uncheckedPositions) > 0:                    
+                positionsToAdd = []
+                positionsToRemove = []
+                for pos in uncheckedPositions:        
+                    opp = self.getOppositeSide(pos[2])
+                    oppPos = []
+                    if self.placedTiles[pos[0] + opp[0]][pos[1] + opp[1]] is not None: 
+                        oppPos = (pos[0] + opp[0], pos[1] + opp[1], opp[2])
+                        oppTile = self.placedTiles[oppPos[0]][oppPos[1]]
+                        for side in self.getCity(oppTile, oppPos[2]):
+                            positionsToAdd.append((oppPos[0], oppPos[1], side))
+                    checkedPositions.add(pos)
+                    positionsToRemove.append(pos)
+
+                for pos in positionsToRemove:
+                    uncheckedPositions.remove(pos)
+                for pos in positionsToAdd:
+                    if pos not in checkedPositions:
+                        uncheckedPositions.add(pos)
+
+            cityTiles = []
+            meeplesCount = [0, 0, 0, 0]
+            meeplesToRemove = []
+            for pos in checkedPositions:
+                for i in range(self.playerCount):
+                    if list(pos) in self.meeplePositions[i]: 
+                        meeplesToRemove.append(list(pos))
+                        meeplesCount[i] += 1
+                tile = self.placedTiles[pos[0]][pos[1]]
+                if tile not in cityTiles:
+                    cityTiles.append(tile)
+                
+            cityScore = 0
+            for tile in cityTiles:
+                cityScore += 2 if tile.shield else 1
+            
+            high = max(meeplesCount)
+            for n, i in enumerate(meeplesCount):
+                self.playerMeeples[n] += i
+                if i == high and i != 0:
+                    self.playerPoints[n] += cityScore
+            for meeple in meeplesToRemove:
+                for player in self.meeplePositions:
+                    if meeple in player:
+                        player.remove(meeple)
+        def endScoreFields(self, tile, meepleSide):
+            finishedCities = self.findFinishedCities()
+            x = tile.col
+            y = tile.row
+
+            uncheckedPositions = set()
+            checkedPositions = set()
+            for side in self.getField(tile, meepleSide):
+                uncheckedPositions.add((x, y, side))                    
+            while len(uncheckedPositions) > 0:
+                positionsToAdd = []
+                positionsToRemove = []
+                for pos in uncheckedPositions:             
+                    opp = self.getOppositeSide(pos[2])
+                    oppPos = []
+                    if self.placedTiles[pos[0] + opp[0]][pos[1] + opp[1]] is not None: 
+                        oppPos = (pos[0] + opp[0], pos[1] + opp[1], opp[2])
+                        oppTile = self.placedTiles[oppPos[0]][oppPos[1]]
+                        for side in self.getField(oppTile, oppPos[2]):
+                            positionsToAdd.append((oppPos[0], oppPos[1], side))
+                    checkedPositions.add(pos)
+                    positionsToRemove.append(pos)
+
+                for pos in positionsToRemove:
+                    uncheckedPositions.remove(pos)
+                for pos in positionsToAdd:
+                    if pos not in checkedPositions:
+                        uncheckedPositions.add(pos)
+
+            fieldTiles = set()
+            meeplesCount = [0, 0, 0, 0]
+            meeplesToRemove = []
+            for pos in checkedPositions:
+                for i in range(self.playerCount):
+                    if list(pos) in self.meeplePositions[i]: 
+                        meeplesToRemove.append(list(pos))
+                        meeplesCount[i] += 1
+                tile = self.placedTiles[pos[0]][pos[1]]
+                tmp = (tile.col, tile.row)
+                fieldTiles.add(tmp)
+                
+            fieldScore = 0
+            for curTile in fieldTiles:
+                citiesToRemove = []
+                for finCity in finishedCities:
+                    if curTile in finCity:
+                        fieldScore += 3
+                        citiesToRemove.append(finCity)
+                for finCity in citiesToRemove:
+                    finishedCities.remove(finCity)
+
+            high = max(meeplesCount)
+            for n, i in enumerate(meeplesCount):
+                self.playerMeeples[n] += i
+                if i == high and i != 0:
+                    self.playerPoints[n] += fieldScore
+            for meeple in meeplesToRemove:
+                for player in self.meeplePositions:
+                    if meeple in player:
+                        player.remove(meeple)
+        def findFinishedCities(self):
+            finishedCities = []
+
+            for x, col in enumerate(self.placedTiles):
+                for y, tile in enumerate(col):
+                    if tile is not None:
+                        isValid = 1
+                        for fin in finishedCities:
+                            if (x, y) in fin:
+                                isValid = 0
+                        if isValid:
+                            for city in tile.cities:
+                                isFinished = True
+                                uncheckedPositions = set()
+                                checkedPositions = set()
+                                for side in city:
+                                    uncheckedPositions.add((x, y, side))                    
+                                while len(uncheckedPositions) > 0 and isFinished:                    
+                                    positionsToAdd = []
+                                    positionsToRemove = []
+                                    for pos in uncheckedPositions:        
+                                        opp = self.getOppositeSide(pos[2])
+                                        oppPos = []
+                                        if self.placedTiles[pos[0] + opp[0]][pos[1] + opp[1]] is not None: 
+                                            oppPos = (pos[0] + opp[0], pos[1] + opp[1], opp[2])
+                                            oppTile = self.placedTiles[oppPos[0]][oppPos[1]]
+                                            for side in self.getCity(oppTile, oppPos[2]):
+                                                positionsToAdd.append((oppPos[0], oppPos[1], side))
+                                        else:
+                                            isFinished = False
+                                            break
+                                        checkedPositions.add(pos)
+                                        positionsToRemove.append(pos)
+
+                                    for pos in positionsToRemove:
+                                        uncheckedPositions.remove(pos)
+                                    for pos in positionsToAdd:
+                                        if pos not in checkedPositions:
+                                            uncheckedPositions.add(pos)
+                                
+                                if isFinished:
+                                    finishedCities.append(set())
+                                    for pos in checkedPositions:
+                                        finishedCities[-1].add((pos[0], pos[1]))
+            return finishedCities
         def getOppositeSide(self, side):
             if side == 'N': return [0, -1, 'S']
             if side == 'S': return [0, 1, 'N']
@@ -579,6 +861,13 @@ class App:
             if side == 'SSW': return [0, 1, 'NNW']
             if side == 'WSW': return [-1, 0, 'ESE']
             if side == 'WNW': return [-1, 0, 'ENE']
+        def getRoad(self, tile, side):
+            for road in tile.roads:
+                tmp = road.copy()
+                if side in tmp:
+                    if 'C' in tmp:
+                        tmp.remove('C')
+                    return tmp
         def getCity(self, tile, side):
             for city in tile.cities:
                 tmp = city.copy()
@@ -589,6 +878,7 @@ class App:
                 tmp = field.copy()
                 if side in tmp:
                     return tmp
+            print(tile.txtPosX, tile.txtPosY)
         def getTile(self, x, y):
             return self.placedTiles[x][y]
         class Tile:
@@ -667,11 +957,13 @@ while True:
                 if game.turnState == 'tile':
                     game.placeTile(pygame.mouse.get_pos())                
                 elif game.turnState == 'meeple':
-                    game.checkSkip(pygame.mouse.get_pos())
                     game.placeMeeple(pygame.mouse.get_pos())
+                    game.checkSkip(pygame.mouse.get_pos())
             if event.type == pygame.MOUSEBUTTONUP and event.button == 3 and not app.mouseMoving and not mouseMoved:                
                 game.nextTile.rotateTileImage()
                 game.currentRotation = (game.currentRotation + 1) % 4
+            if game.hasEnded:
+                pass
 
         if event.type == pygame.MOUSEMOTION:
             app.mouseMoving = 0            
