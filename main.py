@@ -100,7 +100,17 @@ class App:
             if side == 'S': return (64 - size / 2, 118 - size)
             if side == 'E': return (118 - size, 64 - size / 2)
             if side == 'W': return (10, 64 - size / 2)
+            
             if side == 'C': return (64 - size / 2, 64 - size / 2)
+
+            if side == 'NNW': return (5, 5)
+            if side == 'NNE': return (123 - size, 5)
+            if side == 'ENE': return (123 - size, 5)
+            if side == 'ESE': return (123 - size, 123 - size)
+            if side == 'SSE': return (123 - size, 123 - size)
+            if side == 'SSW': return (5, 123 - size)
+            if side == 'WSW': return (5, 123 - size)
+            if side == 'WNW': return (5, 5)
         def drawGame(self):
             if self.hasStarted:
                 screen.fill((77, 40, 0))
@@ -288,6 +298,7 @@ class App:
             self.checkCloisters(self.placedTile)
             self.checkRoads(self.placedTile)        
             self.checkCities(self.placedTile)
+            self.checkFields(self.placedTile)
 
             if len(self.meepleSpots) > 0 and self.playerMeeples[self.playerTurn] > 0:
                 self.drawSkip = 1
@@ -517,15 +528,65 @@ class App:
                         for player in self.meeplePositions:
                             if meeple in player:
                                 player.remove(meeple)
+        def checkFields(self, tile):
+            x = tile.col
+            y = tile.row
+
+            for field in tile.fields:
+                isAvailable = 1
+                startingPos = [x, y, field[0]]
+                uncheckedPositions = set()
+                checkedPositions = set()
+                for side in field:
+                    uncheckedPositions.add((x, y, side))                    
+                while len(uncheckedPositions) > 0 and isAvailable:
+                    positionsToAdd = []
+                    positionsToRemove = []
+                    for pos in uncheckedPositions:                        
+                        for player in self.meeplePositions:
+                            if list(pos) in player:
+                                isAvailable = False
+                                break
+                        opp = self.getOppositeSide(pos[2])
+                        oppPos = []
+                        if self.placedTiles[pos[0] + opp[0]][pos[1] + opp[1]] is not None: 
+                            oppPos = (pos[0] + opp[0], pos[1] + opp[1], opp[2])
+                            oppTile = self.placedTiles[oppPos[0]][oppPos[1]]
+                            for side in self.getField(oppTile, oppPos[2]):
+                                positionsToAdd.append((oppPos[0], oppPos[1], side))
+                        checkedPositions.add(pos)
+                        positionsToRemove.append(pos)
+
+                    for pos in positionsToRemove:
+                        uncheckedPositions.remove(pos)
+                    for pos in positionsToAdd:
+                        if pos not in checkedPositions:
+                            uncheckedPositions.add(pos)
+                if isAvailable:
+                    self.meepleSpots.append(startingPos)
 
         def getOppositeSide(self, side):
             if side == 'N': return [0, -1, 'S']
             if side == 'S': return [0, 1, 'N']
             if side == 'E': return [1, 0, 'W']
             if side == 'W': return [-1, 0, 'E']
+
+            if side == 'NNW': return [0, -1, 'SSW']
+            if side == 'NNE': return [0, -1, 'SSE']
+            if side == 'ENE': return [1, 0, 'WNW']
+            if side == 'ESE': return [1, 0, 'WSW']
+            if side == 'SSE': return [0, 1, 'NNE']
+            if side == 'SSW': return [0, 1, 'NNW']
+            if side == 'WSW': return [-1, 0, 'ESE']
+            if side == 'WNW': return [-1, 0, 'ENE']
         def getCity(self, tile, side):
             for city in tile.cities:
                 tmp = city.copy()
+                if side in tmp:
+                    return tmp
+        def getField(self, tile, side):
+            for field in tile.fields:
+                tmp = field.copy()
                 if side in tmp:
                     return tmp
         def getTile(self, x, y):
@@ -568,7 +629,6 @@ class App:
                     if side in i:
                         return 'city'                
                 return 'field'                
-
 
 app = App()
 game = app.Game()
